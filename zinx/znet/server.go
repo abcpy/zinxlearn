@@ -17,18 +17,9 @@ type Server struct {
 	IP string
 	// 端口
 	Port int
-}
 
-// 定义当前客户端连接handle api
-func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
-	// 回显业务
-	fmt.Println("[Conn Handle] CallBackToClient ...")
-	if _, err := conn.Write(data[:cnt]); err != nil {
-		fmt.Println("write back buf err", err)
-		return errors.New("CallBackToClient error")
-	}
-
-	return nil
+	// 当前Server由用户绑定的回调router, 也就是Server注册的链接对应的处理业务员
+	Router ziface.IRouter
 }
 
 // 实现 ziface.Iserver 里的全部接口方法
@@ -69,30 +60,11 @@ func (s *Server) Start() {
 			}
 
 			//3.3 处理该连接的请求的业务方法
-			dealConn := NewConnection(conn, cid, CallBackToClient)
+			dealConn := NewConnection(conn, cid, s.Router)
 			cid++
 
 			//3.4 启动当前连接的处理业务
 			go dealConn.Start()
-
-			////最大512字节的回显服务
-			//go func() {
-			//	// 不断的循环从客户端获取数据
-			//	for {
-			//		buf := make([]byte, 512)
-			//		cnt, err := conn.Read(buf)
-			//		if err != nil {
-			//			fmt.Println("recv buf err ", err)
-			//			continue
-			//		}
-			//		//回显
-			//		if _, err := conn.Write(buf[:cnt]); err != nil {
-			//			fmt.Println("write back buf err ", err)
-			//			continue
-			//		}
-			//
-			//	}
-			//}()
 
 		}
 	}()
@@ -113,12 +85,20 @@ func (s *Server) Server() {
 	}
 }
 
+// 路由功能： 给当前服务注册一个路由业务方法， 供客户端链接处理使用
+func (s *Server) AddRouter(router ziface.IRouter) {
+	s.Router = router
+
+	fmt.Println("Add Router succ!")
+}
+
 func NewServer(name string) ziface.IServer {
 	s := &Server{
 		Name:      name,
 		IPVersion: "tcp4",
 		IP:        "0.0.0.0",
 		Port:      7777,
+		Router:    nil,
 	}
 
 	return s
