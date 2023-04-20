@@ -1,6 +1,8 @@
 package ziface
 
-import "net"
+import (
+	"net"
+)
 
 // 定义连接接口
 type IConnection interface {
@@ -18,6 +20,9 @@ type IConnection interface {
 
 	// 获取远程客户端地址信息
 	RemoteAddr() net.Addr
+
+	//直接将Message数据发送给远端的TCP客户端
+	SendMsg(msgId uint32, data []byte) error
 }
 
 // 定义一个统一处理连接业务的接口

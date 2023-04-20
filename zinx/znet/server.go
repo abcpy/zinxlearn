@@ -96,7 +96,7 @@ func (s *Server) AddRouter(router ziface.IRouter) {
 	fmt.Println("Add Router succ!")
 }
 
-func NewServer(name string) ziface.IServer {
+func NewServer() ziface.IServer {
 
 	// 先初始化全局配置文件
 	utils.GlobalObject.Reload()
