@@ -13,4 +13,19 @@ type IServer interface {
 
 	// 路由功能： 给当前服务注册一个路由业务方法， 供客户端链接处理使用
 	AddRouter(msgId uint32, router IRouter)
+
+	//得到链接管理
+	GetConnMgr() IConnManager
+
+	// 设置该Server的连接创建时Hook函数
+	SetOnConnStart(func(IConnection))
+
+	// 设置该Server的连接断开时Hook函数
+	SetOnConnStop(func(IConnection))
+
+	// 调用该Server的连接断开时Hook函数
+	CallOnConnStart(conn IConnection)
+
+	// 调用该Server的连接断开时Hook函数
+	CallOnConnStop(conn IConnection)
 }

@@ -22,9 +22,42 @@ type Server struct {
 	// 当前Server由用户绑定的回调router, 也就是Server注册的链接对应的处理业务员
 	//Router ziface.IRouter
 	msgHandle ziface.IMsgHandle
+
+	// 当前server 的连接管理器
+	connMgr ziface.IConnManager
+
+	// 设置该Server的连接创建时Hook函数
+	OnConnStart (func(conn ziface.IConnection))
+
+	// 设置该Server的连接断开时Hook函数
+	OnConnStop (func(conn ziface.IConnection))
 }
 
 // 实现 ziface.Iserver 里的全部接口方法
+
+// 设置该Server的连接创建时的Hook函数
+func (s *Server) SetOnConnStart(hookFunc func(connection ziface.IConnection)) {
+	s.OnConnStart = hookFunc
+}
+
+func (s *Server) SetOnConnStop(hookFunc func(connection ziface.IConnection)) {
+	s.OnConnStart = hookFunc
+}
+
+// 调用连接OnConnStat Hook函数
+func (s *Server) CallOnConnStart(conn ziface.IConnection) {
+	if s.OnConnStart != nil {
+		fmt.Println("---> CallOnConnStart...")
+		s.OnConnStart(conn)
+	}
+}
+
+func (s *Server) CallOnConnStop(conn ziface.IConnection) {
+	if s.OnConnStart != nil {
+		fmt.Println("---> CallOnConnStop...")
+		s.OnConnStop(conn)
+	}
+}
 
 func (s *Server) Start() {
 	fmt.Printf("[START] Server name: %s, listenner at IP: %s, Port: %d, is starting\n", s.Name, s.IP, s.Port)
@@ -67,8 +100,14 @@ func (s *Server) Start() {
 				continue
 			}
 
+			//3.2 设置服务器最大连接控制， 如果超过最大连接， 那么九关闭新的连接
+			if s.connMgr.Len() >= utils.GlobalObject.MaxConn {
+				conn.Close()
+				continue
+			}
+
 			//3.3 处理该连接的请求的业务方法
-			dealConn := NewConnection(conn, cid, s.msgHandle)
+			dealConn := NewConnection(s, conn, cid, s.msgHandle)
 			cid++
 
 			//3.4 启动当前连接的处理业务
@@ -81,6 +120,10 @@ func (s *Server) Start() {
 
 func (s *Server) Stop() {
 	fmt.Println("[STOP] Zinx server , name ", s.Name)
+
+	//将其他需要清理的连接信息
+
+	s.connMgr.ClearConn()
 }
 
 func (s *Server) Server() {
@@ -100,6 +143,10 @@ func (s *Server) AddRouter(msgId uint32, router ziface.IRouter) {
 	fmt.Println("Add Router succ!")
 }
 
+func (s *Server) GetConnMgr() ziface.IConnManager {
+	return s.connMgr
+}
+
 func NewServer() ziface.IServer {
 
 	// 先初始化全局配置文件
@@ -111,6 +158,7 @@ func NewServer() ziface.IServer {
 		IP:        utils.GlobalObject.Host,
 		Port:      utils.GlobalObject.TcpPort,
 		msgHandle: NewMsgHandle(),
+		connMgr:   NewConnManager(),
 	}
 
 	return s

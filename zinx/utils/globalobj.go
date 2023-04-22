@@ -19,6 +19,7 @@ type GlobalObj struct {
 	MaxConn          int    // 当前服务器主机允许的最大链接个数
 	WorkerPoolSize   uint32 // 业务工作Worker池的数量
 	MaxWorkerTaskLen uint32 // 业务工作Worker对应负责的任务队列最大任务存储数量
+	MaxMsgChanLen    uint32
 }
 
 // 定义一个全局的对象
@@ -58,6 +59,7 @@ func init() {
 		MaxPacketSize:    4096,
 		WorkerPoolSize:   10,
 		MaxWorkerTaskLen: 1024,
+		MaxMsgChanLen:    100,
 	}
 
 	GlobalObject.Reload()
