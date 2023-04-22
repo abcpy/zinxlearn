@@ -7,6 +7,7 @@ import (
 	"github.com/jian/Zinx/zinx/ziface"
 	"io"
 	"net"
+	"sync"
 )
 
 type Connection struct {
@@ -35,6 +36,12 @@ type Connection struct {
 
 	//有缓冲管道， 用于读。写两个goroutine 之间的消息通信
 	msgBuffChan chan []byte
+
+	// 连接属性
+	property map[string]interface{}
+
+	// 保护连接属性修改的锁
+	propertyLock sync.RWMutex
 }
 
 // 创建连接的方法
@@ -48,6 +55,7 @@ func NewConnection(server ziface.IServer, conn *net.TCPConn, connID uint32, msgH
 		ExitBuffChan: make(chan bool, 1),
 		msgChan:      make(chan []byte), //msgChan初始化
 		msgBuffChan:  make(chan []byte, utils.GlobalObject.MaxMsgChanLen),
+		property:     make(map[string]interface{}), // 连接属性map初始化
 	}
 
 	//将新创建的Conn添加到连接管理中
@@ -55,6 +63,34 @@ func NewConnection(server ziface.IServer, conn *net.TCPConn, connID uint32, msgH
 
 	return c
 
+}
+
+// 设置连接属性
+func (c *Connection) SetProperty(key string, value interface{}) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+
+	c.property[key] = value
+}
+
+// 获取链接属性
+func (c *Connection) GetProperty(key string) (interface{}, error) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+
+	if value, ok := c.property[key]; ok {
+		return value, nil
+	} else {
+		return nil, errors.New("No Property found")
+	}
+}
+
+// 移除连接
+func (c *Connection) RemoveProperty(key string) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+
+	delete(c.property, key)
 }
 
 // 处理conn读数据的Goroutine
